@@ -75,7 +75,7 @@ void client_main(int fd)
 	render();
 
 	// wait for a moment
-	sleep(3);
+	sleep(1);
 
 	// send to server for display
 	present(fd);

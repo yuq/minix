@@ -149,6 +149,8 @@ static void composite(int fd)
 	GLint texMap = glGetUniformLocation(state.program, "texMap");
 	glUniform1i(texMap, 0); // GL_TEXTURE0
 
+	glClear(GL_COLOR_BUFFER_BIT);
+
 	glDrawElements(GL_TRIANGLES, sizeof(index)/sizeof(GLushort), GL_UNSIGNED_SHORT, index);
 
 	eglSwapBuffers(state.display, state.surface);
