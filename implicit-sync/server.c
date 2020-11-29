@@ -81,22 +81,11 @@ static const char fragment_shader[] =
 static void composite(int fd)
 {
 	struct present_buffer data;
-	static int fds[32] = {-1};
-	static int num_fds = 0;
-	int nfd = 32 - num_fds;
+	int buffer_fd;
 
 	// get new window frame from client
-	ssize_t size = sock_fd_read(fd, &data, sizeof(data), fds + num_fds, &nfd);
+	ssize_t size = sock_fd_read(fd, &data, sizeof(data), &buffer_fd);
 	assert(size > 0);
-
-	num_fds += nfd;
-	assert(num_fds);
-
-	// we may read multi fds one time, so need an fds buffer
-	int buffer_fd = fds[0];
-	num_fds--;
-	if (num_fds)
-		memmove(fds, fds + 1, num_fds * sizeof(int));
 
 	struct gbm_import_fd_data gbm_data = {
 		.fd = buffer_fd,
@@ -121,6 +110,9 @@ static void composite(int fd)
 		EGL_NATIVE_PIXMAP_KHR, bo, NULL);
 	assert(image != EGL_NO_IMAGE_KHR);
 
+	// destroy after usage
+	gbm_bo_destroy(bo);
+
 	glActiveTexture(GL_TEXTURE0);
 
 	epoxy_has_gl_extension("GL_OES_EGL_image");
@@ -131,6 +123,9 @@ static void composite(int fd)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glEGLImageTargetTexture2DOES(GL_TEXTURE_2D, image);
+
+	// destroy after usage
+	eglDestroyImageKHR(state.display, image);
 
 	GLfloat x = -1.0 + data.x * 2.0 / state.target_width;
 	GLfloat y = 1.0 - data.y * 2.0 / state.target_height;
@@ -172,6 +167,9 @@ static void composite(int fd)
 	glDrawElements(GL_TRIANGLES, sizeof(index)/sizeof(GLushort), GL_UNSIGNED_SHORT, index);
 
 	eglSwapBuffers(state.display, state.surface);
+
+	// delete after usage
+	glDeleteTextures(1, &texid);
 
 	// infom client window frame has been consumed
 	struct present_done done = {
@@ -285,6 +283,9 @@ void server_main(int fd)
 	// init render
 	render_target_init(&state);
 	init_gles(&state, vertex_shader, fragment_shader);
+
+	// background color
+	glClearColor(0.15, 0.15, 0.15, 0);
 
 	dispatch_fd = epoll_create1(0);
 	assert(dispatch_fd >= 0);

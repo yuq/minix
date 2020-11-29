@@ -72,6 +72,11 @@ void client_main(int fd)
 	// render
 	render_target_init(&state);
 	init_gles(&state, vertex_shader, fragment_shader);
+
+	// background color
+	glClearColor(0, 0, 0, 0);
+
+	// do OpenGL rendering
 	render();
 
 	// wait for a moment

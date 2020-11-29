@@ -34,7 +34,7 @@ struct render_state {
 };
 
 ssize_t sock_fd_write(int sock, void *buf, ssize_t buflen, int fd);
-ssize_t sock_fd_read(int sock, void *buf, ssize_t bufsize, int *fds, int *num_fd);
+ssize_t sock_fd_read(int sock, void *buf, ssize_t bufsize, int *fd);
 
 void client_main(int fd);
 void server_main(int fd);

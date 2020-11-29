@@ -39,6 +39,7 @@ static void render(uint64_t index)
 	glEnableVertexAttribArray(position);
 	glVertexAttribPointer(position, 3, GL_FLOAT, 0, 0, vertex);
 
+	// rotate around Y axis
 	static const int seconds_per_round = 5;
 	static const int monitor_fps = 60;
 	static const double pi = 3.1415926;
@@ -94,7 +95,7 @@ static void get_free_buffer(int fd)
 		return;
 
 	struct present_done data;
-	ssize_t size = sock_fd_read(fd, &data, sizeof(data), NULL, NULL);
+	ssize_t size = sock_fd_read(fd, &data, sizeof(data), NULL);
 	assert(size > 0);
 
 	struct gbm_bo *bo = busy_bos[data.index % MAX_BOS];
@@ -112,6 +113,9 @@ void client_main(int fd)
 	// render
 	render_target_init(&state);
 	init_gles(&state, vertex_shader, fragment_shader);
+
+	// background color
+	glClearColor(0, 0, 0, 0);
 
 	for (uint64_t i = 0; true; i++) {
 		// ensure back buffer is free and release buffer when receive

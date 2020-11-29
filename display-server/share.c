@@ -233,7 +233,6 @@ void init_gles(struct render_state *s, const char *vertex_shader,
 		exit(1);
 	}
 
-	glClearColor(0, 0, 0, 0);
 	glViewport(0, 0, s->target_width, s->target_height);
 
 	glUseProgram(s->program);

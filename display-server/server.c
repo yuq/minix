@@ -192,6 +192,9 @@ void server_main(int fd)
 	render_target_init(&state);
 	init_gles(&state, vertex_shader, fragment_shader);
 
+	// background color
+	glClearColor(0.15, 0.15, 0.15, 0);
+
 	// get client output and past on fb
 	composite(fd);
 

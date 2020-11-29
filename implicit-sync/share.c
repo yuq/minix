@@ -52,17 +52,18 @@ sock_fd_write(int sock, void *buf, ssize_t buflen, int fd)
 }
 
 ssize_t
-sock_fd_read(int sock, void *buf, ssize_t bufsize, int *fds, int *num_fd)
+sock_fd_read(int sock, void *buf, ssize_t bufsize, int *fd)
 {
     ssize_t     size;
 
-    if (fds) {
+    if (fd) {
         struct msghdr   msg;
         struct iovec    iov;
         union {
             struct cmsghdr  cmsghdr;
             char        control[CMSG_SPACE(sizeof (int))];
         } cmsgu;
+	struct cmsghdr  *cmsg;
 
         iov.iov_base = buf;
         iov.iov_len = bufsize;
@@ -78,21 +79,22 @@ sock_fd_read(int sock, void *buf, ssize_t bufsize, int *fds, int *num_fd)
             perror ("recvmsg");
             exit(1);
         }
+        cmsg = CMSG_FIRSTHDR(&msg);
+        if (cmsg && cmsg->cmsg_len == CMSG_LEN(sizeof(int))) {
+            if (cmsg->cmsg_level != SOL_SOCKET) {
+                fprintf (stderr, "invalid cmsg_level %d\n",
+                     cmsg->cmsg_level);
+                exit(1);
+            }
+            if (cmsg->cmsg_type != SCM_RIGHTS) {
+                fprintf (stderr, "invalid cmsg_type %d\n",
+                     cmsg->cmsg_type);
+                exit(1);
+            }
 
-	int max_fds = *num_fd;
-	int offset = 0;
-	struct cmsghdr *hdr;
-	if (msg.msg_controllen >= sizeof(struct cmsghdr)) {
-		for (hdr = CMSG_FIRSTHDR(&msg); hdr; hdr = CMSG_NXTHDR(&msg, hdr)) {
-			if (hdr->cmsg_level == SOL_SOCKET && hdr->cmsg_type == SCM_RIGHTS) {
-				int nfd = (hdr->cmsg_len - CMSG_LEN(0)) / sizeof (int);
-				assert(nfd <= max_fds - offset);
-				memcpy(fds + offset, CMSG_DATA(hdr), nfd * sizeof (int));
-				offset += nfd;
-			}
-		}
-	}
-	*num_fd = offset;
+            *fd = *((int *) CMSG_DATA(cmsg));
+        } else
+            *fd = -1;
     } else {
         size = read (sock, buf, bufsize);
         if (size < 0) {
@@ -230,7 +232,6 @@ void init_gles(struct render_state *s, const char *vertex_shader,
 		exit(1);
 	}
 
-	glClearColor(0, 0, 0, 0);
 	glViewport(0, 0, s->target_width, s->target_height);
 
 	glUseProgram(s->program);
